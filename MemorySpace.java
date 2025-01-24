@@ -58,8 +58,21 @@ public class MemorySpace {
 	 * @return the base address of the allocated block, or -1 if unable to allocate
 	 */
 	public int malloc(int length) {		
-		//// Replace the following statement with your code
-		return -1;
+		for (int i = 0; i < freeList.getSize(); i++) {
+            MemoryBlock currentFreeBlock = freeList.getBlock(i);
+            if (currentFreeBlock.length >= length) {
+                int baseAddress = currentFreeBlock.baseAddress;
+                MemoryBlock allocatedMemoryBlock = new MemoryBlock(baseAddress, length);
+                allocatedList.addLast(allocatedMemoryBlock);
+                currentFreeBlock.baseAddress += length;
+                currentFreeBlock.length -= length;
+                if (currentFreeBlock.length == 0) {
+                    freeList.remove(i);
+                }
+                return baseAddress;
+            }
+        }
+        return -1;
 	}
 
 	/**
@@ -71,7 +84,24 @@ public class MemorySpace {
 	 *            the starting address of the block to freeList
 	 */
 	public void free(int address) {
-		//// Write your code here
+		if (allocatedList.getSize() == 0) {
+			throw new IllegalArgumentException(
+					"index must be between 0 and size");
+		}
+		MemoryBlock memoryBlockToFree = null;
+        int indexToRemove = -1;
+        for (int i = 0; i < allocatedList.getSize(); i++) {
+            MemoryBlock currentBlock = allocatedList.getBlock(i);
+            if (currentBlock.baseAddress == address) {
+                memoryBlockToFree = currentBlock;
+                indexToRemove = i;
+                break;
+            }
+        }
+        if (memoryBlockToFree != null) {
+            allocatedList.remove(indexToRemove);
+        	freeList.addLast(memoryBlockToFree);
+        }
 	}
 	
 	/**
@@ -88,6 +118,29 @@ public class MemorySpace {
 	 * In this implementation Malloc does not call defrag.
 	 */
 	public void defrag() {
-		//// Write your code here
+		if (freeList.getSize() < 2) {
+            return;
+        }
+        java.util.ArrayList<MemoryBlock> blocks = new java.util.ArrayList<>();
+        for (int i = 0; i < freeList.getSize(); i++) {
+            blocks.add(freeList.getBlock(i));
+        }
+        blocks.sort((a,b)->Integer.compare(a.baseAddress, b.baseAddress));
+        freeList = new LinkedList();
+        for (MemoryBlock mb : blocks) {
+            freeList.addLast(mb);
+        }
+        int i = 0;
+        while (i < freeList.getSize() - 1) {
+            MemoryBlock currentBlock = freeList.getBlock(i);
+            MemoryBlock nextBlock = freeList.getBlock(i+1);
+            if (currentBlock.baseAddress + currentBlock.length == nextBlock.baseAddress) {
+                currentBlock.length += nextBlock.length;
+                freeList.remove(nextBlock);
+            } 
+			else {
+                i++;
+            }
+        }
 	}
 }
